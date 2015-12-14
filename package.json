@@ -1,7 +1,7 @@
 {
-  "name": "openlayers-tutorial",
+  "name": "openlayers-experimentation",
   "version": "0.0.0",
-  "description": "Code for Chris Jennison's openLayers tutorial.",
+  "description": "Exploring features of openLayers 3.",
   "main": "server.js",
   "dependencies": {
     "body-parser": "^1.4.3",
