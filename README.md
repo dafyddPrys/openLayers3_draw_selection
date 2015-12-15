@@ -1,4 +1,4 @@
-# openLayers3_experimentation
+# openLayers3 - select features by drawing polygon
 
 An openLayers 3 example of using interaction.Draw to make a polygon used to select point features.
 
