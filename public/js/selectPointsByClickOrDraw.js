@@ -79,24 +79,24 @@ map.addInteraction(draw);
 	Only one polygon drawn at a time. */
 draw.on('drawstart',function(event){
 	drawingSource.clear();
-	selectedFeatures.clear();
+	//selectedFeatures.clear();
 	select.setActive(false);
 	
 	sketch = event.feature;
 	
 	listener = sketch.getGeometry().on('change',function(event){
 		selectedFeatures.clear();
-		var geom = event.target;
-		if(geom instanceof ol.geom.Polygon){
-			var extent = geom.getExtent();
-			pointsLayer.getSource().forEachFeatureIntersectingExtent(extent, function(feature) {
-				selectedFeatures.push(feature);
-			});
+		var polygon = event.target;
+		var features = pointsLayer.getSource().getFeatures();
+
+		for (var i = 0 ; i < features.length; i++){
+			if(polygon.intersectsExtent(features[i].getGeometry().getExtent())){
+				selectedFeatures.push(features[i]);
+			}
 		}
-		
-	})
-	
+	});
 },this);
+
 
 /* Reactivate select after 300ms (to avoid single click trigger)
 	and create final set of selected features. */
@@ -105,11 +105,15 @@ draw.on('drawend', function(event) {
 	delaySelectActivate();
 	selectedFeatures.clear();
 
-	var extent = event.feature.getGeometry().getExtent();
+	var polygon = event.feature.getGeometry();
+	var features = pointsLayer.getSource().getFeatures();
 
-	pointsLayer.getSource().forEachFeatureIntersectingExtent(extent, function(feature) {
-		selectedFeatures.push(feature);
-    });
+	for (var i = 0 ; i < features.length; i++){
+		if(polygon.intersectsExtent(features[i].getGeometry().getExtent())){
+			selectedFeatures.push(features[i]);
+		}
+	}
+	
 	
 });
 
@@ -130,14 +134,15 @@ modify.on('modifystart',function(event){
 	listener = event.features.getArray()[0].getGeometry().on('change',function(event){
 		// clear features so they deselect when polygon moves away
 		selectedFeatures.clear();
-		var geom = event.target;
-		if(geom instanceof ol.geom.Polygon){
-			var extent = geom.getExtent();
-			pointsLayer.getSource().forEachFeatureIntersectingExtent(extent, function(feature) {
-				selectedFeatures.push(feature);
-			});
+		var polygon = event.target;
+		var features = pointsLayer.getSource().getFeatures();
+
+		for (var i = 0 ; i < features.length; i++){
+			if(polygon.intersectsExtent(features[i].getGeometry().getExtent())){
+				selectedFeatures.push(features[i]);
+			}
 		}
-	})
+	});
 },this);
 
 /* Reactivate select function */
@@ -145,11 +150,14 @@ modify.on('modifyend',function(event){
 	sketch = null;
 	delaySelectActivate();
 	selectedFeatures.clear();
-	var extent = event.features.getArray()[0].getGeometry().getExtent();
+	var polygon = event.features.getArray()[0].getGeometry();
+	var features = pointsLayer.getSource().getFeatures();
 
-	pointsLayer.getSource().forEachFeatureIntersectingExtent(extent, function(feature) {
-		selectedFeatures.push(feature);
-    });
+	for (var i = 0 ; i < features.length; i++){
+		if(polygon.intersectsExtent(features[i].getGeometry().getExtent())){
+			selectedFeatures.push(features[i]);
+		}
+	}
 
 },this);
 
