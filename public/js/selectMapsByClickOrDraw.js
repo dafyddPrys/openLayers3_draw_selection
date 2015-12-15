@@ -1,17 +1,20 @@
 var map;
 
+
+
+/* Add map layer */
 var baseLayer = new ol.layer.Tile({
 	source : new ol.source.OSM()
 });
 
+/* Add view */
 var view = new ol.View({
-	//projection is about how we represent a global thing on a flat thing.
 	projection : 'EPSG:900913',
 	center : ol.proj.fromLonLat([-2.5,51.1]),
 	zoom:4,
 });
 
-
+/* Add layer of point features */
 var pointsLayer = new ol.layer.Vector({
 	title: 'random points',
 	source : new ol.source.Vector({
@@ -20,7 +23,7 @@ var pointsLayer = new ol.layer.Vector({
 	})
 });
 
-//initialise map (called at the end)
+/* Initialise map */
 function init(){
 	map = new ol.Map({
 		target : 'map',
@@ -34,127 +37,130 @@ function init(){
 
 init();
 
-//////////// ADD DRAWING
+/* //////////// ADD SELECTION */
 
-//Define the collection of features and the overlay to show them.
-var features = new ol.Collection();
-var featureOverlay = new ol.layer.Vector({
-	source : new ol.source.Vector({ features : features}),
-	style : new ol.style.Style({
-		fill : new ol.style.Fill({
-			color: 'rgba(255,255,255,0.2)',
-		}),
-		stroke : new ol.style.Stroke({
-			color : '#ffcc33',
-			width : 2
-		}),
-		image : new ol.style.Circle({
-			radius : 5,
-			fill : new ol.style.Fill({
-				color : '#ffcc33'
-			})
-		})
-	})
-});
-
-featureOverlay.setMap(map);
-
-//add drawing interaction - polygons only
-
-//declare these globally so we can attach listeners to them later.
-var draw;
-var modify;
-function addInteraction(){
-	draw = new ol.interaction.Draw({
-		features : features,
-		type : 'Polygon'
-	});
-	map.addInteraction(draw);
-	
-	//add modification of polygons
-	var modify = new ol.interaction.Modify({
-		features : features
-	});
-	map.addInteraction(modify);
-	
-	//add event listener (wouldn't work outside this function)
-	modify.on('modifyend',function(event){
-		selectedFeatures.clear(); 
-		//var extent = event.feature.getGeometry().getExtent();
-		var extent = event.features.getArray()[0].getGeometry();
-		pointsLayer.getSource().forEachFeatureIntersectingExtent(extent,function(feature){
-			selectedFeatures.push(feature);
-		});
-		console.log(selectedFeatures.getArray().length);
-	});
-	
-	modify.on('modifystart',function(event){
-		console.log(selectedFeatures.getArray().length);
-	});
-}
-
-addInteraction();
-
-
-//////////// SUPPORTING FUNCTIONS
-
-//turn the cursor into a pointer if it's over an image.
-map.on('pointermove',function(evt){
-	if(evt.dragging){
-		return;
-	}
-	var pixel = map.getEventPixel(evt.originalEvent);
-	//called with pixel, callback. Detects layers that have a colour value
-	//at a pixel.
-	var hit = map.forEachFeatureAtPixel(pixel,function(feature){
-		return true;
-	});
-	map.getTargetElement().style.cursor = hit? 'pointer' : '';
-});
-
-//default is single click interaction.
+/* add ol.collection to hold all selected features */
 var select = new ol.interaction.Select();
-
-//////////// Selecting features in a polygons
+map.addInteraction(select);
 var selectedFeatures = select.getFeatures();
 
-// Add the interaction - style of selected function changes by default
-map.addInteraction(select);
-select.on('select', function (event){
-	if(event.target){
-		//Do stuff with target(s)
-	    var selectedFeatures = event.target.getFeatures().getArray();
-	}
-})
+/* //////////// ADD DRAWING */
 
-function onPolygonEnd(event){
-	//features that intersect the polygon will get added to the collection
-	//of selected features.
-	selectedFeatures.clear(); 
+/* The current drawing */
+var sketch;
+
+/* Add drawing vector source */
+var drawingSource = new ol.source.Vector({
+	useSpatialIndex : false
+});
+
+/* Add drawing layer */
+var drawingLayer = new ol.layer.Vector({
+	source: drawingSource
+});
+map.addLayer(drawingLayer);
+
+/* Declare interactions and listener globally so we 
+	can attach listeners to them later. */
+var draw;
+var modify;
+var listener;
+
+// Drawing interaction
+draw = new ol.interaction.Draw({
+	source : drawingSource,
+	type : 'Polygon',
+	//only draw when Ctrl is pressed.
+	condition : ol.events.condition.platformModifierKeyOnly
+});
+map.addInteraction(draw);
+
+/* Deactivate select and delete any existing polygons.
+	Only one polygon drawn at a time. */
+draw.on('drawstart',function(event){
+	drawingSource.clear();
+	selectedFeatures.clear();
+	select.setActive(false);
+	
+	sketch = event.feature;
+	
+	listener = sketch.getGeometry().on('change',function(event){
+		selectedFeatures.clear();
+		var geom = event.target;
+		if(geom instanceof ol.geom.Polygon){
+			var extent = geom.getExtent();
+			pointsLayer.getSource().forEachFeatureIntersectingExtent(extent, function(feature) {
+				selectedFeatures.push(feature);
+			});
+		}
+		
+	})
+	
+},this);
+
+/* Reactivate select after 300ms (to avoid single click trigger)
+	and create final set of selected features. */
+draw.on('drawend', function(event) {
+	sketch = null;
+	delaySelectActivate();
+	selectedFeatures.clear();
+
 	var extent = event.feature.getGeometry().getExtent();
-	pointsLayer.getSource().forEachFeatureInExtent(extent,function(feature){
+
+	pointsLayer.getSource().forEachFeatureIntersectingExtent(extent, function(feature) {
 		selectedFeatures.push(feature);
-	});
-	console.log(selectedFeatures.getArray().length);
+    });
+	
+});
+
+
+/* Modify polygons interaction */
+
+var modify = new ol.interaction.Modify({
+	//only allow modification of drawn polygons
+	features: drawingSource.getFeaturesCollection()
+});
+map.addInteraction(modify);
+
+/* Point features select/deselect as you move polygon.
+	Deactivate select interaction. */
+modify.on('modifystart',function(event){
+	sketch = event.features;
+	select.setActive(false);
+	listener = event.features.getArray()[0].getGeometry().on('change',function(event){
+		// clear features so they deselect when polygon moves away
+		selectedFeatures.clear();
+		var geom = event.target;
+		if(geom instanceof ol.geom.Polygon){
+			var extent = geom.getExtent();
+			pointsLayer.getSource().forEachFeatureIntersectingExtent(extent, function(feature) {
+				selectedFeatures.push(feature);
+			});
+		}
+	})
+},this);
+
+/* Reactivate select function */
+modify.on('modifyend',function(event){
+	sketch = null;
+	delaySelectActivate();
+	selectedFeatures.clear();
+	var extent = event.features.getArray()[0].getGeometry().getExtent();
+
+	pointsLayer.getSource().forEachFeatureIntersectingExtent(extent, function(feature) {
+		selectedFeatures.push(feature);
+    });
+
+},this);
+
+
+/* //////////// SUPPORTING FUNCTIONS */
+
+function delaySelectActivate(){
+	setTimeout(function(){
+		select.setActive(true)
+	},300);
 }
-
-draw.on('drawend',function(event){
-	onPolygonEnd(event);
-});
-
-//reset selection when drawing a new polygon
-
-draw.on('drawstart', function(event){
-	selectedFeatures.clear();
-});
-
-
-map.on('click',function(){
-	selectedFeatures.clear();
-})
-
-
-
 
 
 
