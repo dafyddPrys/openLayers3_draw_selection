@@ -1,6 +1,5 @@
+/* //////////// INITIALISE MAP */
 var map;
-
-
 
 /* Add map layer */
 var baseLayer = new ol.layer.Tile({
@@ -18,7 +17,7 @@ var view = new ol.View({
 var pointsLayer = new ol.layer.Vector({
 	title: 'random points',
 	source : new ol.source.Vector({
-		url : './assets/Points.json',
+		url : '../assets/Points.json',
 		format : new ol.format.GeoJSON()
 	})
 });

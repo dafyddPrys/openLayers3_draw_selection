@@ -1,22 +1,23 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<title>OpenLayers map</title>
-				
-		<!--Styles-->
-		<link rel="stylesheet" href="http://openlayers.org/en/v3.11.2/css/ol.css" type="text/css">
-		<link rel='stylesheet' href='./css/style.css'>
-	</head>
-	<body>
-		<div id='map'></div>
 
-		<!--Scripts-->
-		<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
-		<script src="./ol-debug.js" type="text/javascript"></script>
-		<script src="./js/selectPointsByClickOrDraw.js"></script>
-		<script src="./js/controls.js"></script>
-		
+<head>
+  <title>OpenLayers map</title>
+  <!--Styles-->
+</head>
 
+<body>
+  Draw polygons by holding down Ctrl. <br/><br/>
+  Draw a polygon around points and once the polygon is complete, the points inside the polygon will be selected.
 
-	</body>
+  <div id="map"></div>
+  
+  <!--Scripts-->
+  <link data-require="openlayers@*" data-semver="3.11.2" rel="stylesheet" href="http://openlayers.org/en/v3.11.2/css/ol.css" />
+  <script data-require="openlayers@*" data-semver="3.11.2" src="http://openlayers.org/en/v3.11.2/build/ol-debug.js"></script>
+  <script src="./js/selectPointsByClickOrDraw.js"></script>
+
+  
+</body>
+
 </html>
